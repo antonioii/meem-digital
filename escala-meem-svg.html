@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MEEM – Mini-Exame do Estado Mental</title>
+<style>
+  :root{
+    --bg:#f7f7fb; --card:#ffffff; --ink:#1f2937; --muted:#6b7280;
+    --accent:#2563eb; --ok:#16a34a; --warn:#b45309; --bad:#b91c1c; --border:#e5e7eb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif; color:var(--ink); background:var(--bg); line-height:1.45}
+  header{padding:24px 16px 0; text-align:center}
+  .wrap{max-width:900px;margin:0 auto;padding:0 16px 32px}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; margin:16px 0}
+  h1{font-size:1.6rem; margin:0 0 6px}
+  p.lead{margin:0 0 12px; color:var(--muted)}
+  h2{font-size:1.15rem; margin:0 0 10px}
+  h3{font-size:1rem; margin:14px 0 8px; color:var(--muted)}
+  fieldset{border:0; padding:0; margin:0}
+  .q{display:flex; align-items:flex-start; gap:10px; padding:8px 10px; border-radius:8px}
+  .q:hover{background:#fafafa}
+  .q.soft{background:#f3f4f6}
+  .q.soft:hover{background:#e5e7eb}
+  .q input{transform:translateY(2px)}
+  .sub{padding-left:8px; border-left:3px solid var(--border); margin-left:4px}
+  .grid-2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px}
+  .scorebar{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+  .badge{display:inline-flex; align-items:center; gap:8px; padding:10px 12px; border-radius:12px; background:#eef2ff; color:#1e3a8a; font-weight:600}
+  .badge small{display:block; font-weight:400; color:var(--muted)}
+  .pill{padding:6px 10px; border:1px solid var(--border); border-radius:999px; background:#fff}
+  .live{font-weight:700}
+  .legend{font-size:.9rem; color:var(--muted)}
+  .stack{display:flex; gap:8px; flex-wrap:wrap}
+  .muted{color:var(--muted)}
+  .hint{font-size:.9rem; color:var(--muted); margin-top:6px}
+  .cutoff{font-weight:700; padding:4px 8px; border-radius:8px}
+  .ok{color:#065f46; background:#ecfdf5}
+  .warn{color:#7c2d12; background:#fffbeb}
+  .bad{color:#7f1d1d; background:#fef2f2}
+  .controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  button{cursor:pointer; border:1px solid var(--border); background:#fff; padding:8px 12px; border-radius:10px}
+  button:hover, .back-to-top:hover{background:#f9fafb}
+  .back-to-top{display:inline-block; padding:8px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; color:var(--ink); text-decoration:none}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+  .foot{font-size:.85rem;color:var(--muted)}
+  .method{display:none}
+  .method.active{display:block}
+  .hr{height:1px; background:var(--border); margin:10px 0}
+  label.switch{display:inline-flex; align-items:center; flex-wrap:wrap; gap:8px; max-width:100%; padding:6px 10px; border:1px solid var(--border); border-radius:18px; background:#fff}
+  select, .select{max-width:100%; min-width:0; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:#fff}
+  .timer-display{font-size:1.5rem; font-weight:700; font-variant-numeric:tabular-nums}
+  footer{text-align:center; color:var(--muted); font-size:.9rem}
+  footer a{display:inline-flex; align-items:center; gap:6px; color:inherit}
+  footer svg{width:20px; height:20px; fill:currentColor}
+  @media (max-width:600px){.grid-2{grid-template-columns:minmax(0,1fr)} label.switch{width:100%} label.switch select{flex:1 1 180px}}
+</style>
+</head>
+<body id="topo">
+  <header class="wrap">
+    <h1>🧠 MEEM – Mini-Exame do Estado Mental</h1>
+    <p class="lead">Ferramenta de rastreio cognitivo (pontuação total: <strong>30</strong>). Tempo típico: 5–10 minutos.</p>
+  </header>
+
+  <main class="wrap" id="app">
+    <section class="card" aria-labelledby="sec-timer">
+      <h2 id="sec-timer">Cronômetro</h2>
+      <div class="controls">
+        <span id="timer" class="timer-display" role="timer" aria-label="Tempo decorrido">00:00</span>
+        <button type="button" id="timer-start">Iniciar</button>
+        <button type="button" id="timer-pause" disabled>Pausar</button>
+        <button type="button" id="timer-reset">Zerar</button>
+      </div>
+    </section>
+
+    <!-- Painel de pontuação -->
+    <section class="card" aria-labelledby="sec-score">
+      <h2 id="sec-score">Pontuação &amp; Interpretação</h2>
+      <div class="scorebar">
+        <div class="badge" aria-live="polite" aria-atomic="true">
+          <span class="live" id="score">0</span>/<span>30</span>
+          <small>Total</small>
+        </div>
+        <div class="pill"><strong>Orientação:</strong> <span id="s-orient">0</span>/10</div>
+        <div class="pill"><strong>Registro:</strong> <span id="s-reg">0</span>/3</div>
+        <div class="pill"><strong>Atenção/Cálculo:</strong> <span id="s-aten">0</span>/5</div>
+        <div class="pill"><strong>Evocação:</strong> <span id="s-evoc">0</span>/3</div>
+        <div class="pill"><strong>Linguagem:</strong> <span id="s-ling">0</span>/8</div>
+        <div class="pill"><strong>Construtiva:</strong> <span id="s-cons">0</span>/1</div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="grid-2">
+        <div>
+          <label class="switch">
+            Via de Atenção:
+            <select id="via">
+              <option value="calc">Cálculo (100–7)</option>
+              <option value="soletra">Soletração (“MUNDO” ←)</option>
+            </select>
+          </label>
+        </div>
+        <div>
+          <label class="switch">
+            Escolaridade:
+            <select id="edu">
+              <option value=">8">&gt; 8 anos (corte ≥ 26)</option>
+              <option value="4-8">4–8 anos (corte ≥ 24)</option>
+              <option value="1-3">1–3 anos (corte ≥ 23)</option>
+              <option value="0">Analfabeto (corte ≥ 19)</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+      <h2 id="sec-cut">📊 Pontos de corte (valores usuais)</h2>
+      <ul class="muted">
+        <li>&gt; 8 anos: <strong>≥ 26</strong></li>
+        <li>4–8 anos: <strong>≥ 24</strong></li>
+        <li>1–3 anos: <strong>≥ 23</strong></li>
+        <li>Analfabetos: <strong>≥ 19</strong></li>
+      </ul>
+      <p class="foot">O MEEM é um <em>rastreamento</em>. Interpretar no contexto clínico, cultural e educacional.</p>
+    </section>
+
+    <!-- 1. Orientação -->
+    <section class="card" aria-labelledby="sec-orient">
+      <h2 id="sec-orient">1. Orientação (10 pontos)</h2>
+
+      <h3>Tempo (5 pontos)</h3>
+      <fieldset class="sub" aria-describedby="d-tempo">
+        <legend class="sr-only">Tempo</legend>
+        <div id="d-tempo" class="legend">Marque 1 ponto para cada resposta correta.</div>
+        <label class="q"><input type="checkbox" data-points="1" data-group="orient"> 1) Que dia é hoje?</label>
+        <label class="q"><input type="checkbox" data-points="1" data-group="orient"> 2) Em que mês estamos?</label>
+        <label class="q"><input type="checkbox" data-points="1" data-group="orient"> 3) Em que ano estamos?</label>
+        <label class="q"><input type="checkbox" data-points="1" data-group="orient"> 4) Em que dia da semana estamos?</label>
+        <label class="q"><input type="checkbox" data-points="1" data-group="orient"> 5) Em que estação do ano estamos?</label>
+      </fieldset>
+
+      <h3>Espaço (5 pontos)</h3>
+      <fieldset class="sub" aria-describedby="d-espaco">
+        <legend class="sr-only">Espaço</legend>
+        <div id="d-espaco" class="legend">Marque 1 ponto para cada resposta correta.</div>
+        <label class="q"><input type="checkbox" data-points="1" data-group="orient"> 6) Em que país estamos?</label>
+        <label class="q"><input type="checkbox" data-points="1" data-group="orient"> 7) Em que estado/região?</label>
+        <label class="q"><input type="checkbox" data-points="1" data-group="orient"> 8) Em que cidade?</label>
+        <label class="q"><input type="checkbox" data-points="1" data-group="orient"> 9) Em que bairro/localidade?</label>
+        <label class="q"><input type="checkbox" data-points="1" data-group="orient"> 10) Em que local exato (casa, hospital etc.)?</label>
+      </fieldset>
+    </section>
+
+    <!-- 2. Registro -->
+    <section class="card" aria-labelledby="sec-registro">
+      <h2 id="sec-registro">2. Registro (3 pontos)</h2>
+      <p class="muted">Diga três palavras (ex.: “bola, gato, árvore” / "caneca, tijolo, tapete"). Marque 1 ponto por repetição correta.</p>
+      <fieldset class="sub">
+        <legend class="sr-only">Registro</legend>
+        <label class="q"><input type="checkbox" data-points="1" data-group="reg"> Palavra 1 correta</label>
+        <label class="q"><input type="checkbox" data-points="1" data-group="reg"> Palavra 2 correta</label>
+        <label class="q"><input type="checkbox" data-points="1" data-group="reg"> Palavra 3 correta</label>
+      </fieldset>
+    </section>
+
+    <!-- 3. Atenção e Cálculo (5) -->
+    <section class="card" aria-labelledby="sec-atencao">
+      <h2 id="sec-atencao">3. Atenção e Cálculo (5 pontos – escolha a via no cabeçalho)</h2>
+
+      <div id="via-calc" class="method active" data-method="calc">
+        <h3>Cálculo (100 – 7, cinco subtrações)</h3>
+        <p class="muted">Marque 1 ponto por subtração correta (máx. 5).</p>
+        <fieldset class="sub">
+          <legend class="sr-only">Cálculo</legend>
+          <label class="q"><input type="checkbox" data-points="1" data-group="aten-calc"> 93</label>
+          <label class="q"><input type="checkbox" data-points="1" data-group="aten-calc"> 86</label>
+          <label class="q"><input type="checkbox" data-points="1" data-group="aten-calc"> 79</label>
+          <label class="q"><input type="checkbox" data-points="1" data-group="aten-calc"> 72</label>
+          <label class="q"><input type="checkbox" data-points="1" data-group="aten-calc"> 65</label>
+        </fieldset>
+      </div>
+
+      <div id="via-soletra" class="method" data-method="soletra">
+        <h3>Soletração (“MUNDO” de trás para frente)</h3>
+        <p class="muted">Marque 1 ponto por letra na ordem correta (máx. 5).</p>
+        <fieldset class="sub">
+          <legend class="sr-only">Soletração</legend>
+          <label class="q"><input type="checkbox" data-points="1" data-group="aten-soletra"> O</label>
+          <label class="q"><input type="checkbox" data-points="1" data-group="aten-soletra"> D</label>
+          <label class="q"><input type="checkbox" data-points="1" data-group="aten-soletra"> N</label>
+          <label class="q"><input type="checkbox" data-points="1" data-group="aten-soletra"> U</label>
+          <label class="q"><input type="checkbox" data-points="1" data-group="aten-soletra"> M</label>
+        </fieldset>
+      </div>
+    </section>
+
+    <!-- 4. Evocação -->
+    <section class="card" aria-labelledby="sec-evoc">
+      <h2 id="sec-evoc">4. Evocação (3 pontos)</h2>
+      <p class="muted">Peça para lembrar as três palavras do Registro. Marque 1 ponto por acerto.</p>
+      <fieldset class="sub">
+        <legend class="sr-only">Evocação</legend>
+        <label class="q"><input type="checkbox" data-points="1" data-group="evoc"> Palavra 1 lembrada</label>
+        <label class="q"><input type="checkbox" data-points="1" data-group="evoc"> Palavra 2 lembrada</label>
+        <label class="q"><input type="checkbox" data-points="1" data-group="evoc"> Palavra 3 lembrada</label>
+      </fieldset>
+    </section>
+
+    <!-- 5. Linguagem -->
+    <section class="card" aria-labelledby="sec-ling">
+      <h2 id="sec-ling">5. Linguagem (8 pontos)</h2>
+      <fieldset class="sub" aria-describedby="d-ling">
+        <legend class="sr-only">Linguagem</legend>
+        <div id="d-ling" class="legend">Marque conforme cada item for realizado corretamente.</div>
+        <label class="q"><input type="checkbox" data-points="1" data-group="ling"> Nomeia objeto 1 (ex.: caneta)</label>
+        <label class="q"><input type="checkbox" data-points="1" data-group="ling"> Nomeia objeto 2 (ex.: relógio)</label>
+        <label class="q"><input type="checkbox" data-points="1" data-group="ling"> Repete: “Nem aqui, nem ali, nem lá.”</label>
+        <div class="q" style="flex-direction:column; align-items:stretch;">
+          <div class="muted" style="margin-bottom:6px;">Dê a ordem de 3 estágios (1 ponto por etapa realizada):</div>
+          <label class="q"><input type="checkbox" data-points="1" data-group="ling"> Pega o papel com a mão direita</label>
+          <label class="q"><input type="checkbox" data-points="1" data-group="ling"> Dobra ao meio</label>
+          <label class="q"><input type="checkbox" data-points="1" data-group="ling"> Coloca no chão</label>
+        </div>
+        <div class=" q" style="flex-direction:column; align-items:stretch;">
+          <div class="muted" style="margin-bottom:6px;">Escreva “FECHE OS OLHOS” numa folha, peça para a pessoa ler e executar a ação escrita.</div>
+          <label class="q"><input type="checkbox" data-points="1" data-group="ling"> Cumpre a instrução escrita “Feche os olhos”</label>
+        </div>
+        <div class=" q" style="flex-direction:column; align-items:stretch;">
+          <div class="muted" style="margin-bottom:6px;">Dê uma caneta à pessoa e peça que escreva uma frase completa (sujeito + verbo).</div>
+          <label class="q"><input type="checkbox" data-points="1" data-group="ling"> Escreve uma frase completa (sujeito + verbo)</label>
+        </div>
+      </fieldset>
+    </section>
+
+    
+<!-- 6. Construtiva Visual -->
+<section class="card" aria-labelledby="sec-cons">
+  <h2 id="sec-cons">6. Habilidade Construtiva Visual (1 ponto)</h2>
+  <p class="muted">Copiar dois <strong>losangos</strong> que se cruzam; marque se a interseção for clara.</p>
+
+  <!-- 👇 SVG embutido inline -->
+  <figure class="copy-fig" aria-describedby="copy-legend">
+    <svg id="Camada_1" data-name="Camada 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" aria-label="Modelo de dois losangos sobrepostos">
+      <defs>
+        <style>
+          .cls-1 {
+            fill: none;
+            stroke: #000;
+            stroke-miterlimit: 10;
+            stroke-width: 5px;
+          }
+        </style>
+      </defs>
+      <polygon class="cls-1" points="689.98 199.61 281.28 417.12 361.85 873.03 820.34 937.29 1023.13 521.1 689.98 199.61"/>
+      <polygon class="cls-1" points="1003.71 129.55 691.59 471.49 920.35 874 1373.84 780.82 1425.37 320.73 1003.71 129.55"/>
+    </svg>
+
+    <figcaption id="copy-legend" class="legend">
+      O paciente deve copiar o desenho acima em uma folha.
+    </figcaption>
+  </figure>
+
+  <fieldset class="sub">
+    <legend class="sr-only">Construtiva</legend>
+    <label class="q"><input type="checkbox" data-points="1" data-group="cons"> Cópia adequada dos losangos</label>
+  </fieldset>
+</section>
+
+<style>
+  .copy-fig {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin: 8px 0 12px;
+  }
+  .copy-fig svg {
+    max-width: 260px;
+    width: 100%;
+    height: auto;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    background: #fff;
+    padding: 10px;
+  }
+</style>
+
+
+    <!-- Resultado -->
+    <section class="card" aria-labelledby="sec-result">
+      <h2 id="sec-result">Resultado</h2>
+      <p class="hint">A interpretação abaixo muda automaticamente com base na escolaridade selecionada.</p>
+      <p>Interpretação: <span id="interp" class="cutoff ok">Aguardando marcações…</span></p>
+
+      <div class="controls">
+        <button type="button" id="reset">Limpar respostas</button>
+      </div>
+    </section>
+    <div class="controls">
+      <a class="back-to-top" href="#topo">↑ Voltar ao topo</a>
+    </div>
+  </main>
+  <footer class="wrap">
+    <p>© <span id="year"></span> Antonio II. Todos os direitos reservados.</p>
+    <a href="https://github.com/antonioii" target="_blank" rel="noopener noreferrer" aria-label="Perfil de Antonio II no GitHub">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.24c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.33-1.76-1.33-1.76-1.09-.75.08-.73.08-.73 1.2.08 1.83 1.23 1.83 1.23 1.07 1.83 2.81 1.3 3.5.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.34-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.17 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.65.24 2.87.12 3.17.77.84 1.24 1.91 1.24 3.22 0 4.6-2.81 5.62-5.49 5.92.43.38.81 1.1.81 2.22v3.32c0 .32.22.7.83.58A12 12 0 0 0 12 .5Z"/></svg>
+      GitHub
+    </a>
+  </footer>
+
+<script>
+(function(){
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+  const timerDisplay = $("#timer");
+  const timerStart = $("#timer-start");
+  const timerPause = $("#timer-pause");
+  let elapsed = 0, startedAt = 0, timerInterval = null;
+
+  function renderTimer(){
+    const seconds = Math.floor((elapsed + (timerInterval !== null ? performance.now() - startedAt : 0)) / 1000);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor(seconds / 60) % 60;
+    const remainder = seconds % 60;
+    timerDisplay.textContent = (hours ? `${String(hours).padStart(2, "0")}:` : "") +
+      `${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
+  }
+  timerStart.addEventListener("click", ()=>{
+    if (timerInterval !== null) return;
+    startedAt = performance.now();
+    timerInterval = setInterval(renderTimer, 200);
+    timerStart.disabled = true;
+    timerPause.disabled = false;
+  });
+  timerPause.addEventListener("click", ()=>{
+    if (timerInterval === null) return;
+    elapsed += performance.now() - startedAt;
+    clearInterval(timerInterval);
+    timerInterval = null;
+    timerStart.disabled = false;
+    timerPause.disabled = true;
+    renderTimer();
+  });
+  $("#timer-reset").addEventListener("click", ()=>{
+    clearInterval(timerInterval);
+    timerInterval = null;
+    elapsed = 0;
+    timerStart.disabled = false;
+    timerPause.disabled = true;
+    renderTimer();
+  });
+  $("#year").textContent = new Date().getFullYear();
+
+  const scoreEls = {
+    total: $("#score"),
+    orient: $("#s-orient"),
+    reg:   $("#s-reg"),
+    aten:  $("#s-aten"),
+    evoc:  $("#s-evoc"),
+    ling:  $("#s-ling"),
+    cons:  $("#s-cons"),
+    interp: $("#interp")
+  };
+
+  const viaSel = $("#via");
+  const eduSel = $("#edu");
+  const viaCalc = $("#via-calc");
+  const viaSoletra = $("#via-soletra");
+  const resetBtn = $("#reset");
+
+  const CUTS = {
+    ">8": 26,
+    "4-8": 24,
+    "1-3": 23,
+    "0": 19
+  };
+
+  function activeMethod(){
+    return viaSel.value === "calc" ? "aten-calc" : "aten-soletra";
+  }
+
+  function updateMethodVisibility(){
+    const isCalc = viaSel.value === "calc";
+    viaCalc.classList.toggle("active", isCalc);
+    viaSoletra.classList.toggle("active", !isCalc);
+    // Desconsidera checkboxes da via inativa no cálculo (sem desfazer marcações)
+    updateScores();
+  }
+
+  function sumGroup(groupName){
+    // Somar checkboxes marcados no grupo
+    const boxes = $$(`input[type="checkbox"][data-group="${groupName}"]`);
+    return boxes.reduce((acc, el)=> acc + (el.checked ? Number(el.dataset.points||0) : 0), 0);
+  }
+
+  function updateScores(){
+    const orient = sumGroup("orient");          // /10
+    const reg = sumGroup("reg");                // /3
+    const evoc = sumGroup("evoc");              // /3
+    const ling = sumGroup("ling");              // /8
+    const cons = sumGroup("cons");              // /1
+
+    // Atenção: conta apenas a via ativa
+    const via = activeMethod();
+    const aten = sumGroup(via);                 // /5
+
+    const total = orient + reg + aten + evoc + ling + cons;
+
+    scoreEls.orient.textContent = Math.min(orient, 10);
+    scoreEls.reg.textContent    = Math.min(reg, 3);
+    scoreEls.aten.textContent   = Math.min(aten, 5);
+    scoreEls.evoc.textContent   = Math.min(evoc, 3);
+    scoreEls.ling.textContent   = Math.min(ling, 8);
+    scoreEls.cons.textContent   = Math.min(cons, 1);
+    scoreEls.total.textContent  = Math.min(total, 30);
+
+    updateInterpretation(total);
+  }
+
+  function updateInterpretation(total){
+    const cutoff = CUTS[eduSel.value];
+    const el = scoreEls.interp;
+    let cls = "ok", txt = "";
+
+    if (total >= cutoff){
+      cls = "ok";
+      txt = `Dentro do esperado para a escolaridade selecionada (corte ≥ ${cutoff}).`;
+    } else {
+      // Se estiver próximo (a 1–2 pontos), sinal amarelo; caso contrário, vermelho.
+      if (total >= cutoff - 2){
+        cls = "warn";
+        txt = `Abaixo do corte (corte ≥ ${cutoff}). Achado limítrofe: considerar reavaliação/monitoramento.`;
+      } else {
+        cls = "bad";
+        txt = `Abaixo do corte (corte ≥ ${cutoff}). Recomenda-se avaliação clínica detalhada.`;
+      }
+    }
+    el.className = `cutoff ${cls}`;
+    el.textContent = `${total}/30 – ${txt}`;
+  }
+
+  // Listeners
+  document.addEventListener("change", (e)=>{
+    if (e.target.matches('input[type="checkbox"][data-points]')) updateScores();
+    if (e.target === viaSel){ updateMethodVisibility(); }
+    if (e.target === eduSel){ updateScores(); }
+  });
+
+  resetBtn.addEventListener("click", ()=>{
+    $$('input[type="checkbox"][data-points]').forEach(el=> el.checked = false);
+    viaSel.value = "calc";
+    eduSel.value = ">8";
+    updateMethodVisibility();
+    updateScores();
+  });
+
+  // Inicialização
+  updateMethodVisibility();
+  updateScores();
+})();
+</script>
+</body>
+</html>
+
+
